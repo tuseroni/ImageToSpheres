@@ -1,0 +1,105 @@
+<html>
+<script src="js/three.js"></script>
+<script src="js/OrbitControls.js"></script>
+<script>
+var spheres=[];
+function makeImg(file)
+{
+
+var imgdat=file;
+var reader = new FileReader();
+reader.onload=function(event)
+{
+var img=new Image; 
+img.onload=function()
+{
+doThings(this);
+}
+img.src=event.target.result;
+}
+reader.readAsDataURL(imgdat);
+}
+function doThings(img)
+{
+    spheres.forEach(o=>scene.remove(o));
+    spheres=[];
+    var canvas = null,
+    ctx = null,
+    canvas = document.createElement("canvas");
+    // the canvas should not be visible
+    canvas.style.display = "none";
+    var b = document.getElementsByTagName("body")[0];
+    b.appendChild(canvas);
+    ctx = canvas.getContext("2d");
+    // apply the width and height to the canvas element
+    canvas.width = img.width;
+    canvas.height = img.height;
+    // draw the image into the canvas element
+    ctx.drawImage(img, 0, 0);
+    var image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var imageData = image.data;
+    var newData= {};
+
+
+    for(var i = 0; i <= imageData.length; i+=3)
+    {
+        var num=imageData[i]<<16|imageData[i+1]<<8|imageData[i+2]
+        if(!newData[num])
+        {
+            newData[num]=[0,[imageData[i],imageData[i+1],imageData[i+2]]];
+        }
+        newData[num][0]++;
+    }
+    var largestNum=Object.values(newData).sort((a,b)=>(a[0]<b[0]?1:-1))[0][0];
+    for(var key in newData)
+    {
+        var dat=newData[key]
+        var radiusfactor=(dat[0]/largestNum)
+        var colour=key;
+        const geometry = new THREE.SphereBufferGeometry( 50*radiusfactor, 16, 16 );
+        const material = new THREE.MeshBasicMaterial( {color: Number(colour)} );
+        const sphere = new THREE.Mesh( geometry, material );
+        sphere.position.set((dat[1][0]/255)*100,(dat[1][1]/255)*100,(dat[1][2]/255)*100);
+        scene.add( sphere );
+        spheres.push(sphere);
+    }
+}
+</script>
+<body>
+<p>Image(PNG format):</p>
+<p><input type="file" id="img" accept="image/*" onchange="makeImg(this.files[0])"></p>
+<canvas width=1980 height=760 id="renderCanvas"></canvas>
+<script>
+var _canvas=document.getElementById("renderCanvas");
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+// 			var camera = new THREE.OrthographicCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+//             scene.background=new THREE.TextureLoader().load("images/verona.jpg")//...in fair verona where we lay our scene;
+
+scene.background=new THREE.Color(0xeeeeee);
+var light = new THREE.DirectionalLight( 0xffffff, 1 );
+    light.position.set( 1, 1, 1 ).normalize();
+    light.castShadow = true;
+    light.shadow.radius = 50;
+    scene.add( light );
+
+var renderer = new THREE.WebGLRenderer({ canvas: _canvas,preserveDrawingBuffer: true } );
+renderer.setSize( window.innerWidth, window.innerHeight );
+camera.position.z = 150;
+var controls = new THREE.OrbitControls( camera, renderer.domElement );
+controls.mouseButtons =
+{
+    RIGHT: THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    LEFT: THREE.MOUSE.PAN
+}
+var animate = function () 
+{
+    controls.update();
+    renderer.render( scene, camera );
+};
+setInterval(function(){requestAnimationFrame( animate )},1000/60);
+animate();
+</script>
+</body>
+</html>
